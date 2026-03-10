@@ -234,6 +234,15 @@ if (config.databaseUrl) {
   activeDatabaseConnectionString = config.databaseUrl;
   startupDbInfo = { mode: "external-postgres", connectionString: config.databaseUrl };
 } else {
+  // Check if we're in a sandboxed/serverless environment where embedded postgres won't work
+  const isVercelEnv = process.env.VERCEL === "1" || process.env.VERCEL_ENV !== undefined;
+  if (isVercelEnv) {
+    throw new Error(
+      "Embedded PostgreSQL is not supported in Vercel/serverless environments. " +
+      "Please set DATABASE_URL environment variable to connect to an external PostgreSQL database (e.g., Neon, Supabase).",
+    );
+  }
+
   const moduleName = "embedded-postgres";
   let EmbeddedPostgres: EmbeddedPostgresCtor;
   try {

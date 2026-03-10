@@ -64,8 +64,12 @@ export interface Config {
 
 export function loadConfig(): Config {
   const fileConfig = readConfigFile();
+  // If DATABASE_URL is set in environment, always use external postgres mode
+  const envDatabaseUrl = process.env.DATABASE_URL?.trim() || undefined;
   const fileDatabaseMode =
-    (fileConfig?.database.mode === "postgres" ? "postgres" : "embedded-postgres") as DatabaseMode;
+    envDatabaseUrl
+      ? "postgres" as DatabaseMode
+      : (fileConfig?.database.mode === "postgres" ? "postgres" : "embedded-postgres") as DatabaseMode;
 
   const fileDbUrl =
     fileDatabaseMode === "postgres"
