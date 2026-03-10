@@ -331,8 +331,25 @@ if (config.databaseUrl) {
       try {
         await embeddedPostgres.initialise();
       } catch (err) {
-        logEmbeddedPostgresFailure("initialise", err);
-        throw err;
+        // If initialization fails and it's likely due to a partially existing directory,
+        // clean up and retry once
+        const dirExistsButNotCluster = existsSync(dataDir) && !existsSync(clusterVersionFile);
+        if (dirExistsButNotCluster) {
+          logger.warn(
+            { dataDir, err },
+            "Embedded PostgreSQL initialisation failed with existing directory; cleaning up and retrying",
+          );
+          try {
+            rmSync(dataDir, { recursive: true, force: true });
+            await embeddedPostgres.initialise();
+          } catch (retryErr) {
+            logEmbeddedPostgresFailure("initialise", retryErr);
+            throw retryErr;
+          }
+        } else {
+          logEmbeddedPostgresFailure("initialise", err);
+          throw err;
+        }
       }
     } else {
       logger.info(`Embedded PostgreSQL cluster already exists (${clusterVersionFile}); skipping init`);
